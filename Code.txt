@@ -1,0 +1,211 @@
+#include <WiFi.h> 
+#include <WebServer.h> 
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h> 
+#include <DHT.h> 
+// --- PIN SETUP --- 
+const int buttons[9] = {12, 13, 27, 33, 25, 26, 34, 35,32}; // 9 buttons 
+#define DHTPIN 4 
+#define DHTTYPE DHT11 
+// --- OBJECTS --- 
+DHT dht(DHTPIN, DHTTYPE); 
+LiquidCrystal_I2C lcd(0x27, 16, 2); 
+WebServer server(80); 
+// --- WiFi Credentials (AP MODE) --- 
+const char* ssid = "ESP32_FaultSystem"; 
+const char* password = "12345678"; 
+// --- DATA --- 
+bool phaseFault[3][3]; // [KM][Phase: 0=R,1=Y,2=B] 
+float temperature = 0; 
+void setup() { 
+Serial.begin(115200); 
+pinMode(16, OUTPUT); // R phase 
+pinMode(17, OUTPUT); // Y phase 
+pinMode(18, OUTPUT); // B phase 
+digitalWrite(16, HIGH); // Start with all ON 
+digitalWrite(17, HIGH); 
+digitalWrite(18, HIGH); 
+// --- Button Input Setup --- 
+for (int i = 0; i < 9; i++)  
+{ 
+} 
+pinMode(buttons[i], INPUT_PULLUP); 
+// --- Init Sensors & LCD --- 
+lcd.init(); 
+lcd.backlight(); 
+dht.begin();
+// --- WiFi AP Mode --- 
+WiFi.softAP(ssid, password); 
+Serial.println("AP IP: "); 
+Serial.println(WiFi.softAPIP()); 
+// --- Web Setup --- 
+server.on("/", handleRoot); 
+server.begin(); 
+} 
+void loop() { 
+// Read Buttons 
+for (int i = 0; i < 9; i++) { 
+bool pressed = digitalRead(buttons[i]) == LOW; 
+int km = i % 3;      
+// 0=1km, 1=2km, 2=3km 
+int phase = i / 3;   // 0=R, 1=Y, 2=B 
+phaseFault[km][phase] = pressed; 
+} 
+// Read DHT11 Temperature 
+temperature = dht.readTemperature(); 
+// --- LCD DISPLAY --- 
+lcd.clear();
+lcd.setCursor(0, 0); 
+lcd.print("Temp:"); 
+lcd.print((int)temperature); 
+lcd.print("C     
+ "); // padding 
+lcd.setCursor(0, 1); 
+lcd.print("F:"); // Fault 
+bool faultFound = false; 
+for (int km = 0; km < 3; km++) 
+{ 
+} 
+for (int phase = 0; phase < 3; phase++)  
+{ 
+} 
+if (phaseFault[km][phase])  
+{ 
+} 
+lcd.print(km + 1); 
+lcd.print((phase == 0) ? "R " : (phase == 1) ? "Y " : "B "); 
+faultFound = true; 
+delay(200); 
+bool rFault = phaseFault[0][0] || phaseFault[1][0] || phaseFault[2][0]; 
+bool yFault = phaseFault[0][1] || phaseFault[1][1] || phaseFault[2][1]; 
+bool bFault = phaseFault[0][2] || phaseFault[1][2] || phaseFault[2][2]; 
+digitalWrite(16, rFault ? LOW : HIGH); 
+digitalWrite(17, yFault ? LOW : HIGH); 
+digitalWrite(18, bFault ? LOW : HIGH); 
+// Handle webpage 
+server.handleClient(); 
+} 
+// --- WEBPAGE HANDLER --- 
+void handleRoot() { 
+String html = "<html><head><title>3-Phase Fault Detection</title>"; 
+html += "<meta http-equiv='refresh' content='5'>"; 
+html += "<style>"; 
+html += "body{font-family:Arial;background:#f4f4f4;}"; 
+html += "table{border-collapse:collapse;width:90%;margin:20px auto;font
+size:18px;}"; 
+html += "th,td{border:1px solid #999;padding:10px;text-align:center;}"; 
+html += "th{background:#444;color:white;}"; 
+html += ".ok{background:#c8e6c9;}"; 
+html += ".fault{background:#ffcdd2;}"; 
+html += "</style></head><body>"; 
+html += "<h2 style='text-align:center;'>3-Phase Fault Detection (1-3 
+KM)</h2>";
+html 
++= 
+R</th><th>Phase 
+"<table><tr><th>KM</th><th>Phase 
+Y</th><th>Phase B</th></tr>"; 
+for (int km = 0; km < 3; km++) { 
+html += "<tr><td>" + String(km + 1) + " KM</td>"; 
+for (int phase = 0; phase < 3; phase++) { 
+String status = phaseFault[km][phase] ? "FAULT" : "OK"; 
+String className = phaseFault[km][phase] ? "fault" : "ok"; 
+html += "<td class='" + className + "'>" + status + "</td>"; 
+} 
+html += "</tr>"; 
+} 
+html += "</table>"; 
+html 
++= 
+"<p 
+style='text-align:center;'>Temperature: 
+String((int)temperature) + " °C</p>"; 
+html += "</body></html>"; 
+server.send(200, "text/html", html); 
+} 
+WiFi.softAP(ssid, password); 
+Serial.println("AP IP: "); 
+Serial.println(WiFi.softAPIP());
+// --- Web Setup --- 
+server.on("/", handleRoot); 
+server.begin(); 
+} 
+void loop() { 
+// Read Buttons 
+for (int i = 0; i < 9; i++) { 
+bool pressed = digitalRead(buttons[i]) == LOW; 
+int km = i % 3;      
+// 0=1km, 1=2km, 2=3km 
+int phase = i / 3;   // 0=R, 1=Y, 2=B 
+phaseFault[km][phase] = pressed; 
+} 
+// Read DHT11 Temperature 
+temperature = dht.readTemperature(); 
+// --- LCD DISPLAY --- 
+lcd.clear(); 
+lcd.setCursor(0, 0); 
+lcd.print("Temp:"); 
+lcd.print((int)temperature); 
+lcd.print("C     
+ "); // padding 
+lcd.setCursor(0, 1); 
+lcd.print("F:"); // Fault 
+bool faultFound = false; 
+for (int km = 0; km < 3; km++) 
+{ 
+} 
+for (int phase = 0; phase < 3; phase++)  
+{ 
+} 
+if (phaseFault[km][phase])  
+{ 
+} 
+lcd.print(km + 1); 
+lcd.print((phase == 0) ? "R " : (phase == 1) ? "Y " : "B "); 
+faultFound = true; 
+delay(200); 
+bool rFault = phaseFault[0][0] || phaseFault[1][0] || phaseFault[2][0]; 
+bool yFault = phaseFault[0][1] || phaseFault[1][1] || phaseFault[2][1]; 
+bool bFault = phaseFault[0][2] || phaseFault[1][2] || phaseFault[2][2]; 
+digitalWrite(16, rFault ? LOW : HIGH); 
+digitalWrite(17, yFault ? LOW : HIGH); 
+digitalWrite(18, bFault ? LOW : HIGH); 
+// Handle webpage 
+server.handleClient(); 
+} 
+// --- WEBPAGE HANDLER --- 
+void handleRoot() { 
+String html = "<html><head><title>3-Phase Fault Detection</title>"; 
+html += "<meta http-equiv='refresh' content='5'>"; 
+html += "<style>"; 
+html += "body{font-family:Arial;background:#f4f4f4;}"; 
+html += "table{border-collapse:collapse;width:90%;margin:20px auto;font
+size:18px;}"; 
+html += "th,td{border:1px solid #999;padding:10px;text-align:center;}"; 
+html += "th{background:#444;color:white;}"; 
+html += ".ok{background:#c8e6c9;}"; 
+html += ".fault{background:#ffcdd2;}"; 
+html += "</style></head><body>"; 
+html += "<h2 style='text-align:center;'>3-Phase Fault Detection (1-3 
+KM)</h2>"; 
+html 
++= 
+"<table><tr><th>KM</th><th>Phase 
+Y</th><th>Phase B</th></tr>"; 
+for (int km = 0; km < 3; km++) { 
+html += "<tr><td>" + String(km + 1) + " KM</td>";
+  for (int phase = 0; phase < 3; phase++) { 
+      String status = phaseFault[km][phase] ? "FAULT" : "OK"; 
+      String className = phaseFault[km][phase] ? "fault" : "ok"; 
+      html += "<td class='" + className + "'>" + status + "</td>"; 
+    } 
+    html += "</tr>"; 
+  } 
+ 
+html += "</table>"; 
+html += "<p style='text-align:center;'>Temperature: " + String((int)temperature) 
++ " °C</p>"; 
+html += "</body></html>"; 
+ 
+  server.send(200, "text/html", html); 
+} 
