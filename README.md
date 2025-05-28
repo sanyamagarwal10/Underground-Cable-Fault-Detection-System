@@ -6,11 +6,11 @@ This project presents a cost-effective and scalable solution for detecting and l
 This system leverages the principle of Ohm's Law and voltage drop analysis to detect and localize cable faults. Additional features such as LCD display, GSM alert system, and remote monitoring make it ideal for real-time smart grid applications.
 
 ## 🎯 Objectives
-Detect underground cable faults accurately using ESP32
-Display fault information (type, distance, phase) on a 16x2 LCD
-Send SMS alerts to maintenance personnel using GSM
-Provide cost-efficient, scalable, and energy-efficient fault detection
-Enable integration with future smart grid and IoT platforms
+-- Detect underground cable faults accurately using ESP32
+-- Display fault information (type, distance, phase) on a 16x2 LCD
+-- Send SMS alerts to maintenance personnel using GSM
+-- Provide cost-efficient, scalable, and energy-efficient fault detection
+-- Enable integration with future smart grid and IoT platforms
 
 ## 🧠 Working Principle
 Voltage and current are continuously monitored across cable segments simulated using resistors.
